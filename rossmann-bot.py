@@ -72,6 +72,7 @@ def predict(data):
     return d1
 
 
+
 def parse_message(message):
     chat_id = message['message']['chat']['id']
     store_id = message['message']['text']
@@ -86,9 +87,9 @@ def parse_message(message):
     return chat_id, store_id
 
 
+
 # API initialize
 app = Flask(__name__)
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -108,9 +109,11 @@ def index():
                 # calculation
                 d2 = d1.loc[:, ['store', 'prediction']].groupby(
                     'store').sum().reset_index()
-
-                msg = f'Store Number {d2.loc["store"].values[0]} will  sell {d2.loc["prediction"].values[0]:,.2f} in the next 6 weeks'
-
+                # send message
+                msg = 'Store Number {} will sell R${:,.2f} in the next 6 weeks'.format(
+                            d2['store'].values[0],
+                            d2['prediction'].values[0] ) 
+                
                 send_message(chat_id, msg)
                 return Response('OK', status=200)
 
