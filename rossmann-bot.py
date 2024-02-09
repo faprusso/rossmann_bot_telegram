@@ -96,34 +96,36 @@ def index():
     if request.method == 'POST':
         message = request.get_json()
 
-        chat_id, store_id = parse_message(message)
+        chat_id, store_id = parse_message( message )
 
         if store_id != 'error':
             # loading data
-            data = load_dataset(store_id)
+            data = load_dataset( store_id )
 
             if data != 'error':
                 # prediction
-                d1 = predict(data)
+                d1 = predict( data )
 
                 # calculation
-                d2 = d1.loc[:, ['store', 'prediction']].groupby(
-                    'store').sum().reset_index()
+                d2 = d1.loc[:, ['store', 'prediction']].groupby('store').sum().reset_index()
+                
                 # send message
                 msg = 'Store Number {} will sell R${:,.2f} in the next 6 weeks'.format(
                             d2['store'].values[0],
                             d2['prediction'].values[0] ) 
-                
-                send_message(chat_id, msg)
-                return Response('OK', status=200)
+
+                send_message( chat_id, msg )
+                return Response( 'Ok', status=200 )
 
             else:
-                send_message(chat_id, 'Store Not Available')
-                return Response('OK', status=200)
+                send_message( chat_id, 'Store Not Available' )
+                return Response( 'Ok', status=200 )
 
         else:
-            send_message(chat_id, 'Store ID is wrong')
-            return Response('OK', status=200)
+            send_message( chat_id, 'Store ID is Wrong' )
+            return Response( 'Ok', status=200 )
+
+
     else:
         return '<h1> Rossmann Telegram BOT </h1>'
 
