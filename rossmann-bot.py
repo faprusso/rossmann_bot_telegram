@@ -13,23 +13,27 @@ TOKEN = '6958861406:AAGz0JIutwDuA4L7eQhmYNUBup3WcM0CmZA'
 # endpoint: get updates
 # https://api.telegram.org/bot6958861406:AAGz0JIutwDuA4L7eQhmYNUBup3WcM0CmZA/getUpdates
 
-# endpoint: Webhook
+# endpoint: Webhook localhost
 # https://api.telegram.org/bot6958861406:AAGz0JIutwDuA4L7eQhmYNUBup3WcM0CmZA/setWebhook?url=https://07130defee4b0b.lhr.life
+
+# endpoint: Webhook Render app
+# https://api.telegram.org/bot6958861406:AAGz0JIutwDuA4L7eQhmYNUBup3WcM0CmZA/setWebhook?url=https://rossmann-telegram-sales.onrender.com
 
 # endpoint: send message
 # https://api.telegram.org/bot6958861406:AAGz0JIutwDuA4L7eQhmYNUBup3WcM0CmZA/sendMessage?chat_id=828489427&text=Hi Felipao, i am doing fine!
 
-def send_message( chat_id, text ):
+
+def send_message(chat_id, text):
     url = f'https://api.telegram.org/bot{TOKEN}'
     url = url + f'/sendMessage?chat_id={chat_id}'
 
-    r = requests.post( url, json={'text': text})
+    r = requests.post(url, json={'text': text})
     print(f'Status Code {r.status_code}')
 
     return None
 
 
-def load_dataset( store_id ):
+def load_dataset(store_id):
     # loading test dataset
     df10 = pd.read_csv('test.csv')
     df_stores_raw = pd.read_csv('store.csv')
@@ -38,25 +42,26 @@ def load_dataset( store_id ):
     df_test = pd.merge(df10, df_stores_raw, how='left', on='Store')
 
     # choose store for prediction
-    df_test = df_test.loc[ df_test['Store'] == store_id, :]
+    df_test = df_test.loc[df_test['Store'] == store_id, :]
 
     if not df_test.empty:
         # remove closed days
-        df_test = df_test.loc[ df_test['Open'] != 0, :]
-        df_test = df_test.loc[ ~df_test['Open'].isnull(), : ]
+        df_test = df_test.loc[df_test['Open'] != 0, :]
+        df_test = df_test.loc[~df_test['Open'].isnull(), :]
         df_test = df_test.drop('Id', axis=1)
 
         # convert DataFrame to json
-        data = json.dumps( df_test.to_dict(orient='records'))
+        data = json.dumps(df_test.to_dict(orient='records'))
     else:
         data = 'error'
 
     return data
 
-def predict( data ):
+
+def predict(data):
     # API Call
     url = 'https://rossmann-sales-o2or.onrender.com/rossmann/predict'
-    header = { 'Content-type': 'application/json'}
+    header = {'Content-type': 'application/json'}
     data = data
 
     r = requests.post(url, data=data, headers=header)
@@ -67,8 +72,7 @@ def predict( data ):
     return d1
 
 
-
-def parse_message( message ):
+def parse_message(message):
     chat_id = message['message']['chat']['id']
     store_id = message['message']['text']
 
@@ -81,38 +85,39 @@ def parse_message( message ):
 
     return chat_id, store_id
 
+
 # API initialize
 app = Flask(__name__)
 
-@app.route( '/', methods=['GET', 'POST'])
 
+@app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         message = request.get_json()
 
-        chat_id, store_id = parse_message( message )
+        chat_id, store_id = parse_message(message)
 
         if store_id != 'error':
             # loading data
-            data = load_dataset( store_id )
+            data = load_dataset(store_id)
 
             if data != 'error':
                 # prediction
-                d1 = predict( data )
+                d1 = predict(data)
 
                 # calculation
-                d2 = d1.loc[ :, ['store', 'prediction']].groupby('store').sum().reset_index()
+                d2 = d1.loc[:, ['store', 'prediction']].groupby(
+                    'store').sum().reset_index()
 
-
-                msg = f'Store Number {d2.loc["store"].values[0]} will  sell {d2.loc["prediction"].values[0]:,.2f} in the next 6 weeks'
+                msg = f'Store Number {d2.loc["Store"].values[0]} will  sell {d2.loc["prediction"].values[0]:,.2f} in the next 6 weeks'
 
                 send_message(chat_id, msg)
                 return Response('OK', status=200)
 
-            else: 
+            else:
                 send_message(chat_id, 'Store Not Available')
                 return Response('OK', status=200)
-        
+
         else:
             send_message(chat_id, 'Store ID is wrong')
             return Response('OK', status=200)
@@ -122,5 +127,4 @@ def index():
 
 if __name__ == '__main__':
     port = os.environ.get('PORT', 5000)
-    app.run( host='0.0.0.0', port=port)
-
+    app.run(host='0.0.0.0', port=port)
